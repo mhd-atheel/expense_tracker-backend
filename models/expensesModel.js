@@ -7,7 +7,7 @@ const expensesSchema = mongoose.Schema(
       required: true,
     },
 
-    cetegory: {
+    category: {
       type: String,
       required: true,
     },
