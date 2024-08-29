@@ -20,7 +20,17 @@ const createExpense =async(req,res)=>{
     }
 }
 
+const getAllExpenses=async(req,res)=>{
+    try {
+      const expense = await Expenses.find();
+      res.status(200).json(expense)
+    } catch (error) {
+      res.status(500).json({ error: "An error occurred" });
+    }
+  }
+
 
 module.exports = {
-    createExpense
+    createExpense,
+    getAllExpenses
 }
