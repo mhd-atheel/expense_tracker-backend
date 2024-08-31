@@ -1,22 +1,23 @@
-const express  = require("express")
-const mongoose = require('mongoose')
-const dotenv = require('dotenv')
+const express  = require("express");
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
 
-const userRoutes = require("./routes/userRoutes")
-const expensesRoutes = require("./routes/expensesRoute")
+const userRoutes = require("./routes/userRoutes");
+const expensesRoutes = require("./routes/expensesRoute");
+const dashboardRoutes = require("./routes/dashboardRoute");
 
 
 
 
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
-const bodyParser = require('body-parser')
+const bodyParser = require('body-parser');
 
-const app = express()
-dotenv.config()
-app.use(express.json())
-app.use(cookieParser())
-app.use(cors('*'))
+const app = express();
+dotenv.config();
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors('*'));
 
 mongoose.connect(process.env.MONGODB_URI, {
 
@@ -35,9 +36,11 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 
   app.get("/",(req,res)=>{
-    res.json({"welcome":"Hi Atheel we are welcome"})
-  })
+    res.json({"welcome":"Hi Atheel we are welcome"});
+  });
 
 
-  app.use('/auth',userRoutes)
-  app.use('/expense',expensesRoutes)
+  app.use('/auth',userRoutes);
+  app.use('/expense',expensesRoutes);
+  app.use('/dashboard',dashboardRoutes);
+  
