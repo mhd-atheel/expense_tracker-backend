@@ -1,4 +1,4 @@
-const expenses = require("../models/expensesModel");
+
 const Expenses = require("../models/expensesModel");
 const TotalOfExpenses = require("../models/TotalExpenses");
 const mongoose = require("mongoose");
@@ -25,6 +25,8 @@ const dashboard = async(req,res)=>{
         .exec();
 
         const { startOfMonth, endOfMonth } = getCurrentMonthDateRange();
+        
+
 
         if(!expenses){
             return res.status(404).json({ status: "fail", message: "Expense not found." });
@@ -39,42 +41,54 @@ const dashboard = async(req,res)=>{
             return res.status(404).json({ status: "fail", message: "Expense not found." });
         }
 
-        const incomeExpensesCurrentMonth =await Expenses.aggregate([
-            {
-              $match: {
-                userId: userId,
-                type: "Income",
-                date: { $gte: startOfMonth, $lte: endOfMonth },
-              },
+        
+        
+        const incomeExpensesCurrentMonth = await Expenses.aggregate([
+          {
+            $match: {
+              userId: mongoose.Types.ObjectId.createFromHexString(userId),  // Convert to ObjectId
+              type: { $regex: /^Income$/i },  // Case-insensitive match for "Income"
+              date: { $gte: startOfMonth, $lte: endOfMonth },
             },
-            {
-              $group: {
-                _id: null,
-                totalAmount: { $sum: '$amount' },
-              },
+          },
+          {
+            $group: {
+              _id: null,
+              totalAmount: { $sum: '$amount' },
             },
-          ]);
+          },
+        ]);
+        
 
-          const incomeTotalAmount = incomeExpensesCurrentMonth.length > 0 ? incomeExpensesCurrentMonth[0].totalAmount : 0;
+        
+          
+        const incomeTotalAmount = incomeExpensesCurrentMonth.length > 0 
+        ? incomeExpensesCurrentMonth[0].totalAmount 
+        : 0;
+        
+        
+
 
 
           const outcomeExpensesCurrentMonth =await Expenses.aggregate([
             {
               $match: {
-                userId: userId,
-                type: "Outcome",
+                userId: mongoose.Types.ObjectId.createFromHexString(userId),  // Convert to ObjectId
+                type: { $regex: /^Outcome$/i },  // Case-insensitive match for "Income"
                 date: { $gte: startOfMonth, $lte: endOfMonth },
               },
             },
             {
               $group: {
                 _id: null,
-                totalAmount: { $sum: '$amount' },
+                totalAmount: { $sum: '$amount'},
               },
             },
           ]);
 
           const outcomeTotalAmount = outcomeExpensesCurrentMonth.length > 0 ? outcomeExpensesCurrentMonth[0].totalAmount : 0;
+          
+          
 
 
         res.status(200).json(
