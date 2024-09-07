@@ -38,8 +38,6 @@ const createExpense = async (req, res) => {
     }
     res.status(200).json({
       status: "success",
-      expenses: newExpenses,
-      total: totalExpenses.total,
     });
   } catch (error) {
     res.status(500).json(error);
@@ -106,8 +104,6 @@ const getExpensesById = async (req, res) => {
   }
 };
 
-
-
 const updateExpense = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -117,51 +113,87 @@ const updateExpense = async (req, res) => {
     const { type, category, amount, description, date, userId } = req.body;
 
     // Validate required fields
-    if (!id || !type || !category || !amount || !description || !date || !userId) {
-      return res.status(400).json({ status: "fail", message: "All fields are required." });
+    if (
+      !id ||
+      !type ||
+      !category ||
+      !amount ||
+      !description ||
+      !date ||
+      !userId
+    ) {
+      return res
+        .status(400)
+        .json({ status: "fail", message: "All fields are required." });
     }
 
     // Find the existing expense
     const existingExpense = await Expenses.findById(id).session(session);
     if (!existingExpense) {
-      return res.status(404).json({ status: "fail", message: "Expense not found." });
+      return res
+        .status(404)
+        .json({ status: "fail", message: "Expense not found." });
     }
 
     // Check if the userId matches
     if (existingExpense.userId.toString() !== userId) {
-      return res.status(403).json({ status: "fail", message: "Unauthorized to update this expense." });
+      return res
+        .status(403)
+        .json({
+          status: "fail",
+          message: "Unauthorized to update this expense.",
+        });
     }
 
     // Calculate the difference in amount based on the previous and new data
+    // Calculate the amountDifference based on the old and new expense values
     let amountDifference = 0;
+
     if (existingExpense.type === "Income" && type === "Income") {
+      // When both old and new are income, just find the difference
       amountDifference = amount - existingExpense.amount;
     } else if (existingExpense.type === "Outcome" && type === "Outcome") {
+      // When both old and new are outcome, calculate the difference
       amountDifference = -(amount - existingExpense.amount);
     } else if (existingExpense.type === "Income" && type === "Outcome") {
+      // Switching from income to outcome
       amountDifference = -(existingExpense.amount + amount);
     } else if (existingExpense.type === "Outcome" && type === "Income") {
+      // Switching from outcome to income
       amountDifference = existingExpense.amount + amount;
     }
 
-    // Update the expense
+    // Update the expense with new values
     existingExpense.type = type;
     existingExpense.category = category;
     existingExpense.amount = amount;
     existingExpense.description = description;
     existingExpense.date = date;
 
-    await existingExpense.save({ session });
+    const updatedExpense = await Expenses.findByIdAndUpdate(
+      id,
+      { type, category, amount, description, date },
+      { new: true, runValidators: true }
+    );
 
     // Find the total expenses record for the user
-    const totalExpenses = await TotalOfExpenses.findOne({ userId }).session(session);
+    const totalExpenses = await TotalOfExpenses.findOne({ userId }).session(
+      session
+    );
     if (!totalExpenses) {
       throw new Error("Total expenses record not found for the user.");
     }
 
-    // Update the total expenses
-    totalExpenses.total += amountDifference;
-    await totalExpenses.save({ session });
+    // Update the total expenses by adding amountDifference to the existing total
+    const finalAmount = totalExpenses.total + amountDifference;
+    
+
+    // Update the total in the TotalOfExpenses record
+    const total = await TotalOfExpenses.findOneAndUpdate(
+      { userId },
+      { $set: { total: finalAmount } },
+      { new: true, runValidators: true }
+    );
 
     // Commit the transaction
     await session.commitTransaction();
@@ -169,20 +201,15 @@ const updateExpense = async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      expenses: existingExpense,
-      total: totalExpenses.total,
     });
   } catch (error) {
     // Rollback the transaction in case of an error
     await session.abortTransaction();
     session.endSession();
 
-    res.status(500).json({ status: "error", message: error.message });
+    res.status(500).json({ status: "error"});
   }
 };
-
-
-
 
 const deleteExpense = async (req, res) => {
   // Start a session for transaction
@@ -195,18 +222,30 @@ const deleteExpense = async (req, res) => {
 
     // Validate required fields
     if (!id || !userId) {
-      return res.status(400).json({ status: "fail", message: "Expense ID and User ID are required." });
+      return res
+        .status(400)
+        .json({
+          status: "fail",
+          message: "Expense ID and User ID are required.",
+        });
     }
 
     // Find the existing expense
     const existingExpense = await Expenses.findById(id).session(session);
     if (!existingExpense) {
-      return res.status(404).json({ status: "fail", message: "Expense not found." });
+      return res
+        .status(404)
+        .json({ status: "fail", message: "Expense not found." });
     }
 
     // Check if the userId matches
     if (existingExpense.userId.toString() !== userId) {
-      return res.status(403).json({ status: "fail", message: "Unauthorized to delete this expense." });
+      return res
+        .status(403)
+        .json({
+          status: "fail",
+          message: "Unauthorized to delete this expense.",
+        });
     }
 
     // Calculate the amount to adjust in the total expenses
@@ -221,7 +260,9 @@ const deleteExpense = async (req, res) => {
     await Expenses.findByIdAndDelete(id).session(session);
 
     // Find the total expenses record for the user
-    const totalExpenses = await TotalOfExpenses.findOne({ userId }).session(session);
+    const totalExpenses = await TotalOfExpenses.findOne({ userId }).session(
+      session
+    );
     if (!totalExpenses) {
       throw new Error("Total expenses record not found for the user.");
     }
@@ -236,8 +277,6 @@ const deleteExpense = async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      message: "Expense deleted successfully.",
-      total: totalExpenses.total,
     });
   } catch (error) {
     // Rollback the transaction in case of an error
@@ -248,15 +287,10 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-
-
-
-
-
 module.exports = {
   createExpense,
   getAllExpenses,
   getExpensesById,
   updateExpense,
-  deleteExpense
+  deleteExpense,
 };
