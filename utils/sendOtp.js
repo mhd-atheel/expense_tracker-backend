@@ -11,6 +11,19 @@ const sendOtp = async (email, otp) => {
         pass: process.env.EMAIL_PASSWORD,
       },
     });
+
+    await new Promise((resolve, reject) => {
+      // verify connection configuration
+      transporter.verify(function (error, success) {
+          if (error) {
+              console.log(error);
+              reject(error);
+          } else {
+              console.log("Server is ready to take our messages");
+              resolve(success);
+          }
+      });
+  });
   
     var mailOptions = {
       from: process.env.EMAIL,
@@ -18,14 +31,21 @@ const sendOtp = async (email, otp) => {
       subject: 'Your OTP Code',
       text: `Your OTP code is ${otp}`,
     };
+    
+    await new Promise((resolve, reject) => {
+      // send mail
+      transporter.sendMail(mailOptions, (err, info) => {
+          if (err) {
+              console.error(err);
+              reject(err);
+          } else {
+              console.log(info);
+              resolve(info);
+          }
+      });
+  });
   
-    transporter.sendMail(mailOptions, function (error, info) {
-      if (error) {
-        console.log(error);
-      } else {
-        
-      }
-    });
+  
   }; 
   
   function generateOTP() {
