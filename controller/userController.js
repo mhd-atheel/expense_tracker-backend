@@ -152,8 +152,9 @@ const verifyOTP = async (req, res) => {
         $unset: { otp: "", otpExpires: "" },
       }
     );
-
-    res.status(200).json({user});
+    
+    res.status(200).json(user);
+    
   } catch (error) {
     res.status(500).json({ error: "An error occurred" });
   }
